@@ -1,0 +1,15 @@
+# WEB
+/web/node_modules
+/web/build
+/web/.env
+
+# API 1
+/api_1/core/chave.json
+/api_1/core/.env
+/api_1/__pycache__
+/api_1/venv
+/api_1/core/comprovantes
+/api_1/core/extratos
+
+# API 2
+/api_2/node_modules
