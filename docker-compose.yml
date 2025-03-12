@@ -3,20 +3,16 @@ version: "3.8"
 services:
   api_1:
     build:
-      context: ./api
+      context: ./api_1
     ports:
       - "4000:8000"
     restart: always
 
   api_2:
-    build: .
+    build:
+      context: ./api_2
     ports:
       - "4001:4000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=production
     restart: always
 
   web:

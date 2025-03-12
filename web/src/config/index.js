@@ -8,22 +8,22 @@ const ENV = process.env.NODE_ENV || 'development';
 // Configurações de API por ambiente
 const API_CONFIG = {
     development: {
-        baseUrl: 'https://pix1api.awpsoft.com.br/api',
-        uploadUrl: 'https://pix2api.awpsoft.com.br',
-        timeout: 600000,
-        uploadTimeout: 600000
+        baseUrl: 'https://pix2api.awpsoft.com.br/api',
+        uploadUrl: 'https://pix1api.awpsoft.com.br',
+        timeout: 60000000,
+        uploadTimeout: 60000000
     },
     production: {
-        baseUrl: '/api',
-        uploadUrl: '/upload',
-        timeout: 600000,
-        uploadTimeout: 600000
+        baseUrl: 'https://pix2api.awpsoft.com.br/api',
+        uploadUrl: 'https://pix1api.awpsoft.com.br',
+        timeout: 60000000,
+        uploadTimeout: 60000000
     },
     test: {
-        baseUrl: 'http://localhost:4000/api',
-        uploadUrl: 'http://localhost:8000',
-        timeout: 600000,
-        uploadTimeout: 600000
+        baseUrl: 'https://pix2api.awpsoft.com.br/api',
+        uploadUrl: 'https://pix1api.awpsoft.com.br',
+        timeout: 60000000,
+        uploadTimeout: 60000000
     }
 };
 

@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Instala as dependências em modo de produção
-RUN npm install --omit=dev
+RUN npm install
 
 # Copia o restante dos arquivos da aplicação
 COPY . .
