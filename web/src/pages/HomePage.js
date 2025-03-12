@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FileUpload from '../components/FileUpload';
 import ResultSection from '../components/ResultSection';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -7,6 +7,9 @@ import { uploadService } from '../services/apiService';
 import styles from './HomePage.module.css';
 
 function HomePage() {
+    // Referência para controlar submissões
+    const isSubmittingRef = useRef(false);
+    
     const [files, setFiles] = useState({
         corpx: null,
         itau: null,
@@ -18,8 +21,13 @@ function HomePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isEfetivando, setIsEfetivando] = useState(false);
-    // Adiciona um novo estado para rastrear a aba ativa no ResultSection
-    const [activeResultTab, setActiveResultTab] = useState('validos');
+    
+    // Reset da flag de submissão em caso de desmontagem
+    useEffect(() => {
+        return () => {
+            isSubmittingRef.current = false;
+        };
+    }, []);
 
     const handleFileChange = (e, key) => {
         // Verificar se é uma requisição de remoção
@@ -55,8 +63,23 @@ function HomePage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Verificar se já está em submissão
+        console.log("Clique no botão Processar Análise. isSubmittingRef:", isSubmittingRef.current, "isLoading:", isLoading);
+        
+        // Prevenir submissões concorrentes
+        if (isSubmittingRef.current === true || isLoading === true) {
+            console.log("Processamento já em andamento, ignorando clique");
+            return;
+        }
+        
+        // Marcar início do processo
+        isSubmittingRef.current = true;
+        console.log("Iniciando processamento da análise");
+        
         if (multipleFiles.length < 1) {
             setError("Você deve selecionar pelo menos 1 comprovante.");
+            isSubmittingRef.current = false;
             return;
         }
 
@@ -72,19 +95,30 @@ function HomePage() {
             setError(null);
             const result = await uploadService.enviarArquivos(formData);
             setResponseData(result);
-            // Reseta para a aba 'validos' quando novos dados são carregados
-            setActiveResultTab('validos');
+            console.log("Análise processada com sucesso");
         } catch (error) {
-            console.error(error);
+            console.error("Erro ao processar análise:", error);
             setError("Erro ao enviar os arquivos. Verifique sua conexão ou tente novamente.");
         } finally {
+            // Garantir que ambos os estados sejam redefinidos
             setIsLoading(false);
+            isSubmittingRef.current = false;
+            console.log("Finalizado processamento, isSubmittingRef redefinido para:", isSubmittingRef.current);
         }
+    };
+
+    // Função simples para garantir que o botão sempre funcione
+    const handleButtonClick = (e) => {
+        console.log("Botão clicado");
+        // Garantir que isSubmittingRef esteja correto antes de chamar handleSubmit
+        if (isSubmittingRef.current) {
+            isSubmittingRef.current = false;
+        }
+        handleSubmit(e);
     };
 
     const generatePDF = () => {
         if (responseData) {
-            // Usar a mesma função de geração de PDF que é compartilhada com ComprovantesBusca
             handleGeneratePDF(responseData, `relatorio-validacao-${new Date().toISOString().slice(0, 10)}.pdf`);
         } else {
             setError("Sem dados para gerar relatório.");
@@ -95,22 +129,15 @@ function HomePage() {
     const handleEfetivar = (dadosEditados) => {
         console.log("Dados para efetivar:", dadosEditados);
         setIsEfetivando(true);
-        // Após processar a operação:
         setTimeout(() => setIsEfetivando(false), 100);
     };
 
-    // Adiciona um novo manipulador para rastrear mudanças de aba no ResultSection
-    const handleTabChange = (tabName) => {
-        setActiveResultTab(tabName);
-    };
-
-    // CORRIGIDO: Mostra o overlay de carregamento apenas durante o carregamento inicial dos dados,
-    // não quando estiver navegando entre as abas no ResultSection
+    // Mostra o overlay de carregamento apenas durante o carregamento inicial dos dados
     const showLoadingOverlay = isLoading && !responseData;
 
-    // Determina se os botões de ação devem ser desativados com base na aba atual
-    const shouldDisableActions = isLoading || isEfetivando || 
-        (activeResultTab !== 'validos' && activeResultTab !== 'invalidos');
+    // Os botões são desativados apenas durante carregamento
+    // Removida a dependência de isSubmittingRef para shouldDisableActions
+    const shouldDisableActions = isLoading || isEfetivando;
 
     return (
         <div className={styles.container}>
@@ -125,7 +152,7 @@ function HomePage() {
 
             {error && <div className={styles.errorMessage}>{error}</div>}
 
-            <form className={styles.form} onSubmit={handleSubmit}>
+            <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
                 <div className={styles.flexContainer}>
                     <div className={styles.uploadColumn}>
                         <FileUpload
@@ -142,7 +169,6 @@ function HomePage() {
                                 validos={responseData.validos || []}
                                 invalidos={responseData.invalidos || []}
                                 onEfetivar={handleEfetivar}
-                                onTabChange={handleTabChange}
                             />
                         )}
                     </div>
@@ -150,8 +176,9 @@ function HomePage() {
 
                 <div className={styles.buttonGroup}>
                     <button
-                        type="submit"
+                        type="button" // Alterado para button para evitar submissão automática
                         className={`${styles.button} ${styles.primaryButton} ${styles.animateItem}`}
+                        onClick={handleButtonClick} // Usando o novo handler
                         disabled={shouldDisableActions}
                     >
                         {isLoading ? 'Processando...' : 'Processar Análise'}

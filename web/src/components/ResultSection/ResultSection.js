@@ -10,7 +10,7 @@ import MetricsSummary from './MetricsSummary';
 import ResultDetails from './ResultDetails';
 import { comprovantesService } from '../../services/apiService';
 
-function ResultSection({ validos = [], invalidos = [], onEfetivar, onTabChange }) {
+function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
     // State management
     const [dadosEditados, setDadosEditados] = useState({
         validos: [...validos],
@@ -68,6 +68,8 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar, onTabChange }
 
     // Submit changes to server
     const efetivarAlteracoes = async () => {
+        if (isLoading) return;
+        
         try {
             setIsLoading(true);
             const result = await comprovantesService.efetivarAlteracoes(dadosEditados);
@@ -84,12 +86,9 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar, onTabChange }
         }
     };
 
-    // Tab change handler
+    // Tab change handler - Simplificado
     const handleTabChange = (tab) => {
         setActiveTab(tab);
-        if (onTabChange && typeof onTabChange === 'function') {
-            onTabChange(tab);
-        }
     };
 
     // Calculate tab data
@@ -117,10 +116,16 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar, onTabChange }
         );
     }
 
+    console.log("Aba ativa:", activeTab); // Log para depuração
+
     return (
         <div className={styles.container}>
             {/* Tabs navigation */}
-            <TabsNavigation activeTab={activeTab} tabs={tabs} onTabChange={handleTabChange} />
+            <TabsNavigation 
+                activeTab={activeTab} 
+                tabs={tabs} 
+                onTabChange={handleTabChange} 
+            />
 
             {/* Tab content */}
             <div className={styles.tabContent}>
