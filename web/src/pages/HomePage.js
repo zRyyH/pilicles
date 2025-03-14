@@ -22,6 +22,29 @@ function HomePage() {
     const [error, setError] = useState(null);
     const [isEfetivando, setIsEfetivando] = useState(false);
     
+    // Função para resetar COMPLETAMENTE todos os estados (inclusive dados de análise anterior)
+    const resetAllStates = () => {
+        console.log("RESET COMPLETO: Limpando todos os estados e dados anteriores");
+        
+        // Reset de flags de controle
+        isSubmittingRef.current = false;
+        setIsLoading(false);
+        setIsEfetivando(false);
+        
+        // Reset de dados
+        setResponseData(null); // Limpa resultados da análise anterior
+        setError(null);        // Limpa mensagens de erro anteriores
+        
+        // Opcionalmente, você pode resetar os arquivos também se quiser um reset ainda mais completo
+        // setFiles({
+        //    corpx: null,
+        //    itau: null,
+        //    digital: null,
+        //    generico: null,
+        // });
+        // setMultipleFiles([]);
+    };
+    
     // Reset da flag de submissão em caso de desmontagem
     useEffect(() => {
         return () => {
@@ -62,20 +85,12 @@ function HomePage() {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         
-        // Verificar se já está em submissão
-        console.log("Clique no botão Processar Análise. isSubmittingRef:", isSubmittingRef.current, "isLoading:", isLoading);
+        console.log("Executando handleSubmit");
         
-        // Prevenir submissões concorrentes
-        if (isSubmittingRef.current === true || isLoading === true) {
-            console.log("Processamento já em andamento, ignorando clique");
-            return;
-        }
-        
-        // Marcar início do processo
+        // Inicialmente, marcamos que estamos em submissão
         isSubmittingRef.current = true;
-        console.log("Iniciando processamento da análise");
         
         if (multipleFiles.length < 1) {
             setError("Você deve selecionar pelo menos 1 comprovante.");
@@ -92,29 +107,32 @@ function HomePage() {
 
         try {
             setIsLoading(true);
-            setError(null);
             const result = await uploadService.enviarArquivos(formData);
             setResponseData(result);
-            console.log("Análise processada com sucesso");
+            console.log("Análise processada com sucesso", result);
         } catch (error) {
             console.error("Erro ao processar análise:", error);
             setError("Erro ao enviar os arquivos. Verifique sua conexão ou tente novamente.");
         } finally {
-            // Garantir que ambos os estados sejam redefinidos
-            setIsLoading(false);
+            // Garantir que flags de processamento sejam redefinidas
             isSubmittingRef.current = false;
-            console.log("Finalizado processamento, isSubmittingRef redefinido para:", isSubmittingRef.current);
+            setIsLoading(false);
+            console.log("Finalizado processamento, flags resetadas");
         }
     };
 
-    // Função simples para garantir que o botão sempre funcione
+    // Função completamente revisada para garantir que uma nova análise sempre seja realizada
     const handleButtonClick = (e) => {
-        console.log("Botão clicado");
-        // Garantir que isSubmittingRef esteja correto antes de chamar handleSubmit
-        if (isSubmittingRef.current) {
-            isSubmittingRef.current = false;
-        }
-        handleSubmit(e);
+        console.log("===== INÍCIO DE NOVA ANÁLISE =====");
+        
+        // Primeiro, fazemos um reset completo para garantir que estamos começando do zero
+        resetAllStates();
+        
+        // Usamos setTimeout com um valor maior para garantir que todos os estados tenham sido atualizados
+        setTimeout(() => {
+            console.log("Iniciando nova submissão após reset completo");
+            handleSubmit(e);
+        }, 100);
     };
 
     const generatePDF = () => {
@@ -136,7 +154,6 @@ function HomePage() {
     const showLoadingOverlay = isLoading && !responseData;
 
     // Os botões são desativados apenas durante carregamento
-    // Removida a dependência de isSubmittingRef para shouldDisableActions
     const shouldDisableActions = isLoading || isEfetivando;
 
     return (
@@ -176,9 +193,9 @@ function HomePage() {
 
                 <div className={styles.buttonGroup}>
                     <button
-                        type="button" // Alterado para button para evitar submissão automática
+                        type="button"
                         className={`${styles.button} ${styles.primaryButton} ${styles.animateItem}`}
-                        onClick={handleButtonClick} // Usando o novo handler
+                        onClick={handleButtonClick}
                         disabled={shouldDisableActions}
                     >
                         {isLoading ? 'Processando...' : 'Processar Análise'}
