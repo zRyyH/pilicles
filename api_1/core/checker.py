@@ -75,26 +75,29 @@ class Checker:
         """Validar comprovantes de transferências"""
 
         for id, comprovante in self.comprovantes.items():
-            # Validar transferência
-            transferencia = validar_transferencia(comprovante, self.transferencias)
+            try:
+                # Validar transferência
+                transferencia = validar_transferencia(comprovante, self.transferencias)
 
-            if transferencia:
-                comprovante.update({"banco": transferencia["banco"]})
-                # Adicionar transferência validada à lista de transferências validas
-                self.comprovantes_validos.append(
-                    {"comprovante": {id: comprovante}, "transferencia": transferencia}
-                )
+                if transferencia:
+                    comprovante.update({"banco": transferencia["banco"]})
+                    # Adicionar transferência validada à lista de transferências validas
+                    self.comprovantes_validos.append(
+                        {"comprovante": {id: comprovante}, "transferencia": transferencia}
+                    )
 
-                self.transferencias_validas.append(transferencia)
-            else:
-                comprovante.update({"banco": "Desconhecido"})
-                # Adicionar transferência inválida à lista de transferências inválidas
-                self.comprovantes_invalidos.append(
-                    {
-                        "comprovante": {id: comprovante},
-                        "transferencia": "Desconhecido",
-                    }
-                )
+                    self.transferencias_validas.append(transferencia)
+                else:
+                    comprovante.update({"banco": "Desconhecido"})
+                    # Adicionar transferência inválida à lista de transferências inválidas
+                    self.comprovantes_invalidos.append(
+                        {
+                            "comprovante": {id: comprovante},
+                            "transferencia": "Desconhecido",
+                        }
+                    )
+            except:
+                print("Erro ao validar comprovante:", comprovante)
 
         self.transferencias_invalidas = self.transferencias.copy()
 
