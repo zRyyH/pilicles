@@ -3,7 +3,7 @@ from core.cloud_vision import extract_text
 from core.wrappers import safe_execute
 from core.utils import compare_names
 from core.ai import ai_processor
-from core.logger import info
+from core.logger import info, critical
 from core.formatter import (
     format_for_itau,
     format_for_corpx,
@@ -58,16 +58,37 @@ def processar_comprovante(path_image):
     {"nome": "Fulano de Tal", "valor": 100.0, "data": "01/01/2025"}
     """
 
-    if path_image.split(".")[-1] != "pdf":
-        comprovante_content = extract_text(path_image)["textAnnotations"][0][
-            "description"
-        ]
-    else:
-        comprovante_content = extract_content(path_image)
+    try:
+        if path_image.split(".")[-1] != "pdf":
+            comprovante_content = extract_text(path_image)["textAnnotations"][0][
+                "description"
+            ]
+        else:
+            comprovante_content = extract_content(path_image)
 
-    dados_comprovante = ai_processor(SYSTEM_MESSAGE_AI, comprovante_content)
-    info(f"Comprovante processado com OpenAI. Informações obtidas: {dados_comprovante}")
-    return dados_comprovante
+        dados_comprovante = ai_processor(SYSTEM_MESSAGE_AI, comprovante_content)
+        info(
+            f"Comprovante processado com OpenAI. Informações obtidas: {dados_comprovante}"
+        )
+
+        return dados_comprovante
+
+    except:
+        result = {
+            "nome": path_image,
+            "valor": 0,
+            "data": "PROBLEMA NA EXTRAÇÃO",
+        }
+
+        critical(
+            f"Erro ao processar o comprovante: {path_image}. Retornando informações padrão: {result}"
+        )
+
+        print(
+            f"Erro ao processar o comprovante: {path_image}. Retornando informações padrão: {result}"
+        )
+
+        return result
 
 
 @safe_execute
