@@ -1,8 +1,87 @@
-import React, { useState } from 'react';
-import { formatField, sanitize } from '../../utils/formatters';
-import { Edit2, Check } from 'lucide-react';
-import styles from '../ResultSection/ResultSection.module.css';
+import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
+import { Edit2, Check, ChevronDown } from 'lucide-react';
+import styles from './EditableTransferDetail.module.css';
 
+// Lista de campos a serem exibidos/editados
+const CAMPOS = [
+    { id: 'data', label: 'Data' },
+    { id: 'nome', label: 'Nome' },
+    { id: 'valor', label: 'Valor' },
+    { id: 'banco', label: 'Banco' }
+];
+
+// Componente para campo editável (memoizado para prevenir re-renderizações)
+const EditableField = memo(function EditableField({ campo, value, isEditing, onToggleEdit, onChange }) {
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isEditing]);
+
+    const formatValue = useCallback((fieldId, val) => {
+        if (fieldId === 'valor' && val) {
+            return typeof val === 'number' ?
+                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val) : val;
+        }
+        return val || '';
+    }, []);
+
+    const handleChange = useCallback((e) => {
+        let newValue = e.target.value;
+        if (campo === 'valor' && newValue) {
+            newValue = parseFloat(newValue.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        }
+        onChange(newValue);
+    }, [campo, onChange]);
+
+    const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+            onToggleEdit();
+        }
+    }, [onToggleEdit]);
+
+    return (
+        <>
+            {isEditing ? (
+                <div className={styles.editingField}>
+                    <input
+                        ref={inputRef}
+                        type={campo === 'valor' ? 'number' : 'text'}
+                        value={value}
+                        step={campo === 'valor' ? '0.01' : undefined}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        className={styles.input}
+                    />
+                    <button
+                        onClick={onToggleEdit}
+                        className={styles.button}
+                        title="Confirmar alteração"
+                    >
+                        <Check size={16} />
+                    </button>
+                </div>
+            ) : (
+                <div className={styles.displayField}>
+                    <span className={value ? '' : styles.unknown}>
+                        {value ? formatValue(campo, value) : 'Não informado'}
+                    </span>
+                    <button
+                        onClick={onToggleEdit}
+                        className={styles.button}
+                        title="Editar este campo"
+                    >
+                        <Edit2 size={14} />
+                    </button>
+                </div>
+            )}
+        </>
+    );
+});
+
+// Componente principal (mantendo a mesma interface de props)
 function EditableTransferDetail({
     comprovante,
     transferencia,
@@ -13,162 +92,113 @@ function EditableTransferDetail({
     transferenciaId,
     registroIndex
 }) {
-    // Campos a serem exibidos/editados
-    const campos = [
-        { id: 'data', label: 'Data' },
-        { id: 'nome', label: 'Nome' },
-        { id: 'valor', label: 'Valor' },
-        { id: 'banco', label: 'Banco' }
-    ];
+    // Estado para controlar edição de campos
+    const [editing, setEditing] = useState({});
 
-    // Estado para controlar o modo de edição de cada campo
-    const [editMode, setEditMode] = useState({
-        comprovante: {},
-        transferencia: {}
-    });
+    // Estado para controlar expansão/colapso
+    const [isExpanded, setIsExpanded] = useState(false);
 
-    // Alternar o modo de edição de um campo
-    const toggleEditMode = (campo, tipo) => {
-        setEditMode(prev => ({
-            ...prev,
-            [tipo]: {
-                ...prev[tipo],
-                [campo.id]: !prev[tipo][campo.id]
-            }
-        }));
-    };
+    // Função para alternar edição de campo
+    const toggleEdit = useCallback((fieldId, type) => {
+        const key = `${type}-${fieldId}`;
+        setEditing(prev => ({ ...prev, [key]: !prev[key] }));
+    }, []);
 
-    // Atualizar o valor de um campo
-    const handleFieldChange = (campo, valor, tipo) => {
-        // Formata o valor se for um campo numérico
-        let parsedValue = valor;
-        if (campo.id === 'valor' && typeof valor === 'string') {
-            // Remove formatação e converte para número
-            parsedValue = parseFloat(sanitize(valor).replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
-        }
-
+    // Função otimizada para atualizar dados
+    const handleUpdate = useCallback((campo, valor, tipo) => {
         if (tipo === 'comprovante' && comprovanteId) {
-            onComprovanteChange(registroIndex, isValid, comprovanteId, campo.id, parsedValue);
+            onComprovanteChange(registroIndex, isValid, comprovanteId, campo, valor);
         } else if (tipo === 'transferencia' && transferenciaId) {
-            onTransferenciaChange(registroIndex, isValid, transferenciaId, campo.id, parsedValue);
+            onTransferenciaChange(registroIndex, isValid, transferenciaId, campo, valor);
         }
-    };
+    }, [registroIndex, isValid, comprovanteId, transferenciaId, onComprovanteChange, onTransferenciaChange]);
 
-    // Verifica se o objeto comprovante é válido
-    const comprovanteValido = comprovante && typeof comprovante === 'object';
-
-    // Verifica se o objeto transferencia é válido
-    const transferenciaValida = transferencia && typeof transferencia === 'object' &&
+    // Verificações de dados
+    const hasComprovante = comprovante && typeof comprovante === 'object';
+    const hasTransferencia = transferencia && typeof transferencia === 'object' &&
         transferencia !== 'Desconhecido';
 
+    // Mostrar resumo de valores quando colapsado
+    const getSummaryText = () => {
+        if (hasComprovante) {
+            return (
+                <div className={styles.cardSummary}>
+                    {comprovante.nome && <span className={styles.summaryName}>{comprovante.nome}</span>}
+                    {comprovante.valor && (
+                        <span className={styles.summaryValue}>
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comprovante.valor)}
+                        </span>
+                    )}
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
-        <div className={`${styles.resultCard} ${isValid ? styles.validoCard : styles.invalidoCard}`}>
-            <div className={styles.resultCardHeader}>
-                <h4>Registro {registroIndex + 1}</h4>
-                <span className={isValid ? styles.validoBadge : styles.invalidoBadge}>
-                    {isValid ? 'Válido' : 'Inválido'}
-                </span>
+        <div className={`${styles.card} ${isValid ? styles.validCard : styles.invalidCard}`}>
+            <div
+                className={styles.header}
+                onClick={() => setIsExpanded(prev => !prev)}
+                aria-expanded={isExpanded}
+            >
+                <h4 className={styles.title}>Registro {registroIndex + 1}</h4>
+
+                {/* Resumo quando colapsado */}
+                {!isExpanded && getSummaryText()}
+
+                <div className={styles.headerControls}>
+                    <span className={`${styles.badge} ${isValid ? styles.validBadge : styles.invalidBadge}`}>
+                        {isValid ? 'Válido' : 'Inválido'}
+                    </span>
+                    <div className={`${styles.iconRotate} ${isExpanded ? styles.iconRotateUp : ''}`}>
+                        <ChevronDown size={16} />
+                    </div>
+                </div>
             </div>
 
-            <div style={{ padding: '12px' }}>
-                <div className={styles.transferContent}>
-                    {campos.map(campo => {
-                        const compIsEditing = editMode.comprovante?.[campo.id] || false;
-                        const transIsEditing = editMode.transferencia?.[campo.id] || false;
+            <div className={`${styles.content} ${isExpanded ? styles.contentExpanded : ''}`}>
+                <div className={styles.grid}>
+                    {CAMPOS.map(campo => (
+                        <div key={campo.id} className={styles.row}>
+                            <div className={styles.label}>{campo.label}</div>
 
-                        const compValor = comprovanteValido ? comprovante[campo.id] || '' : '';
-                        const transValor = transferenciaValida ? transferencia[campo.id] || '' : '';
+                            {hasComprovante && (
+                                <div className={styles.field}>
+                                    <EditableField
+                                        campo={campo.id}
+                                        value={comprovante[campo.id] || ''}
+                                        isEditing={editing[`comprovante-${campo.id}`]}
+                                        onToggleEdit={() => toggleEdit(campo.id, 'comprovante')}
+                                        onChange={(val) => handleUpdate(campo.id, val, 'comprovante')}
+                                    />
+                                    <div className={styles.fieldLabel}>Comprovante</div>
+                                </div>
+                            )}
 
-                        const compFormatted = formatField(campo.id, compValor);
-                        const transFormatted = formatField(campo.id, transValor);
-
-                        return (
-                            <div key={campo.id} className={styles.infoRow}>
-                                <div className={styles.infoLabel}>{campo.label}</div>
-
-                                {/* Comprovante */}
-                                {comprovanteValido && (
-                                    <div className={styles.infoField}>
-                                        {compIsEditing ? (
-                                            <div className={styles.editingField}>
-                                                <input
-                                                    type={campo.id === 'valor' ? 'number' : 'text'}
-                                                    value={compValor}
-                                                    step={campo.id === 'valor' ? '0.01' : undefined}
-                                                    onChange={(e) => handleFieldChange(campo, e.target.value, 'comprovante')}
-                                                    className={styles.fieldInput}
-                                                />
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => toggleEditMode(campo, 'comprovante')}
-                                                    title="Salvar"
-                                                >
-                                                    <Check size={16} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.displayField}>
-                                                <span>{compFormatted}</span>
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => toggleEditMode(campo, 'comprovante')}
-                                                    title="Editar comprovante"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className={styles.fieldLabel}>Comprovante</div>
-                                    </div>
-                                )}
-
-                                {/* Transferência */}
-                                {transferenciaValida ? (
-                                    <div className={styles.infoField}>
-                                        {transIsEditing ? (
-                                            <div className={styles.editingField}>
-                                                <input
-                                                    type={campo.id === 'valor' ? 'number' : 'text'}
-                                                    value={transValor}
-                                                    step={campo.id === 'valor' ? '0.01' : undefined}
-                                                    onChange={(e) => handleFieldChange(campo, e.target.value, 'transferencia')}
-                                                    className={styles.fieldInput}
-                                                />
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => toggleEditMode(campo, 'transferencia')}
-                                                    title="Salvar"
-                                                >
-                                                    <Check size={16} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.displayField}>
-                                                <span>{transFormatted}</span>
-                                                <button
-                                                    className={styles.iconButton}
-                                                    onClick={() => toggleEditMode(campo, 'transferencia')}
-                                                    title="Editar transferência"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className={styles.fieldLabel}>Transferência</div>
-                                    </div>
-                                ) : (
-                                    <div className={styles.infoField}>
-                                        <span className={styles.desconhecido}>Desconhecido</span>
-                                        <div className={styles.fieldLabel}>Transferência</div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                            {hasTransferencia ? (
+                                <div className={styles.field}>
+                                    <EditableField
+                                        campo={campo.id}
+                                        value={transferencia[campo.id] || ''}
+                                        isEditing={editing[`transferencia-${campo.id}`]}
+                                        onToggleEdit={() => toggleEdit(campo.id, 'transferencia')}
+                                        onChange={(val) => handleUpdate(campo.id, val, 'transferencia')}
+                                    />
+                                    <div className={styles.fieldLabel}>Transferência</div>
+                                </div>
+                            ) : (
+                                <div className={styles.field}>
+                                    <span className={styles.unknown}>Desconhecido</span>
+                                    <div className={styles.fieldLabel}>Transferência</div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
     );
 }
 
-export default EditableTransferDetail;
+export default memo(EditableTransferDetail);

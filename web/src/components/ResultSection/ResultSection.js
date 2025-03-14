@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { formatCurrency } from '../../utils/formatters';
 import EditableTransferDetail from '../EditableTransferDetail';
 import InlineLoading from '../InlineLoading';
@@ -19,6 +19,17 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
     const [respostaEfetivar, setRespostaEfetivar] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('validos');
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [mainAnimationComplete, setMainAnimationComplete] = useState(false);
+    
+    // Efeito para animar o componente inteiro ao montar
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setMainAnimationComplete(true);
+        }, 600);
+        
+        return () => clearTimeout(timer);
+    }, []);
 
     // Handle field change for comprovante
     const handleComprovanteChange = useCallback((registroIndex, isValid, comprovanteId, campo, valor) => {
@@ -68,27 +79,46 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
 
     // Submit changes to server
     const efetivarAlteracoes = async () => {
-        if (isLoading) return;
+        if (isLoading || isAnimating) return;
         
         try {
             setIsLoading(true);
-            const result = await comprovantesService.efetivarAlteracoes(dadosEditados);
-            setRespostaEfetivar(result);
-
-            if (onEfetivar && typeof onEfetivar === 'function') {
-                onEfetivar(dadosEditados);
-            }
+            setIsAnimating(true);
+            
+            // Adicionar animação de saída e depois fazer a requisição
+            setTimeout(async () => {
+                const result = await comprovantesService.efetivarAlteracoes(dadosEditados);
+                setRespostaEfetivar(result);
+                
+                if (onEfetivar && typeof onEfetivar === 'function') {
+                    onEfetivar(dadosEditados);
+                }
+                
+                // Mudar para a aba de resultado após completar
+                setActiveTab('resultado');
+                setIsAnimating(false);
+                setIsLoading(false);
+            }, 300);
+            
         } catch (error) {
             console.error('Erro ao efetivar alterações:', error);
             alert(`Erro ao efetivar alterações: ${error.message}`);
-        } finally {
+            setIsAnimating(false);
             setIsLoading(false);
         }
     };
 
-    // Tab change handler - Simplificado
+    // Tab change handler com animação
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
+        if (isAnimating || tab === activeTab) return;
+        
+        setIsAnimating(true);
+        
+        // Efeito de transição suave
+        setTimeout(() => {
+            setActiveTab(tab);
+            setIsAnimating(false);
+        }, 300);
     };
 
     // Calculate tab data
@@ -106,9 +136,9 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
     // Render empty state
     if (isEmpty) {
         return (
-            <div className={styles.container}>
-                <div className={styles.emptyState}>
-                    <Info size={48} className={styles.emptyStateIcon} />
+            <div className={`${styles.container} ${styles.animateFadeIn}`}>
+                <div className={`${styles.emptyState} ${styles.animateScaleIn}`}>
+                    <Info size={48} className={`${styles.emptyStateIcon} ${styles.animatePulse}`} />
                     <p>Nenhum resultado para exibir</p>
                     <span>Selecione e envie os arquivos para análise</span>
                 </div>
@@ -116,10 +146,12 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
         );
     }
 
-    console.log("Aba ativa:", activeTab); // Log para depuração
-
     return (
-        <div className={styles.container}>
+        <div className={`
+            ${styles.container} 
+            ${mainAnimationComplete ? styles.animateFadeIn : ''}
+            ${isAnimating ? styles.animateScaleOut : ''}
+        `}>
             {/* Tabs navigation */}
             <TabsNavigation 
                 activeTab={activeTab} 
@@ -128,7 +160,11 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
             />
 
             {/* Tab content */}
-            <div className={styles.tabContent}>
+            <div className={`
+                ${styles.tabContent} 
+                ${isAnimating ? styles.fadeOut : styles.fadeIn}
+                ${mainAnimationComplete ? styles.animateFadeIn : ''}
+            `}>
                 {activeTab === 'validos' && (
                     <RecordsDisplay
                         registros={dadosEditados.validos}
@@ -158,16 +194,16 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
             </div>
 
             {/* Actions */}
-            <div className={styles.actionsContainer}>
+            <div className={`${styles.actionsContainer} ${mainAnimationComplete ? styles.animateFadeInUp : ''}`}>
                 {isLoading ? (
-                    <div className={styles.loadingContainer}>
+                    <div className={`${styles.loadingContainer} ${styles.animateFadeIn}`}>
                         <InlineLoading message="Processando efetivação..." size="medium" />
                     </div>
                 ) : (
                     <button
-                        className={`${styles.efetivarButton} ${styles.animateItem}`}
+                        className={`${styles.efetivarButton} ${styles.hoverLift} ${styles.animatePulse}`}
                         onClick={efetivarAlteracoes}
-                        disabled={isLoading}
+                        disabled={isLoading || isAnimating}
                     >
                         <Check size={20} />
                         EFETIVAR ALTERAÇÕES
