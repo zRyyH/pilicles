@@ -90,7 +90,7 @@ const EditableField = memo(function EditableField({ campo, value, isEditing, onT
     );
 });
 
-// Componente principal (mantendo a mesma interface de props)
+// Componente principal
 function EditableTransferDetail({
     comprovante,
     transferencia,
@@ -113,7 +113,7 @@ function EditableTransferDetail({
         setEditing(prev => ({ ...prev, [key]: !prev[key] }));
     }, []);
 
-    // Função otimizada para atualizar dados
+    // Função para atualizar dados
     const handleUpdate = useCallback((campo, valor, tipo) => {
         if (tipo === 'comprovante' && comprovanteId) {
             onComprovanteChange(registroIndex, isValid, comprovanteId, campo, valor);

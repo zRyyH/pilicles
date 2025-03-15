@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import EditableTransferDetail from '../EditableTransferDetail';
 import { Info, Search } from 'lucide-react';
 import styles from './ResultSection.module.css';
@@ -6,31 +6,16 @@ import styles from './ResultSection.module.css';
 function RecordsDisplay({ registros, isValid, onComprovanteChange, onTransferenciaChange }) {
     // Estado para o termo de pesquisa
     const [searchTerm, setSearchTerm] = useState('');
-    // Estado para controlar a visibilidade dos elementos (animação)
-    const [visible, setVisible] = useState(false);
-    // Estado para rastrear quando um novo resultado de pesquisa é mostrado
-    const [searchChanged, setSearchChanged] = useState(false);
-    
-    // Efeito para iniciar a animação ao montar o componente
-    useEffect(() => {
-        setVisible(false);
-        const timer = setTimeout(() => {
-            setVisible(true);
-        }, 100);
-        
-        return () => clearTimeout(timer);
-    }, [isValid]); // Reiniciar animação quando mudar de aba (válidos/inválidos)
-    
+    const [fadeVisible, setFadeVisible] = useState(true);
+
     // Handler para atualização do termo de pesquisa
     const handleSearchChange = useCallback((e) => {
+        setFadeVisible(false);
         setSearchTerm(e.target.value);
-        setSearchChanged(true);
-        
-        // Resetar a animação para os novos resultados de pesquisa
-        setVisible(false);
+
+        // Simple fade transition
         setTimeout(() => {
-            setVisible(true);
-            setSearchChanged(false);
+            setFadeVisible(true);
         }, 300);
     }, []);
 
@@ -61,18 +46,18 @@ function RecordsDisplay({ registros, isValid, onComprovanteChange, onTransferenc
 
     if (registros.length === 0) {
         return (
-            <div className={`${styles.emptyStateTab} ${styles.animateFadeIn}`}>
-                <Info size={24} className={`${styles.emptyIcon} ${styles.animatePulse}`} />
+            <div className={styles.emptyStateTab}>
+                <Info size={24} className={styles.emptyIcon} />
                 <p>Nenhum registro {isValid ? "válido" : "inválido"} encontrado</p>
             </div>
         );
     }
 
     return (
-        <div className={`${styles.section} ${styles.animateFadeIn}`}>
+        <div className={styles.section} style={{ height: 'auto', maxHeight: 'none' }}>
             {/* Campo de pesquisa */}
-            <div className={`${styles.searchContainer} ${styles.animateFadeInUp}`}>
-                <div className={`${styles.searchInputWrapper} ${styles.transitionAll}`}>
+            <div className={styles.searchContainer}>
+                <div className={styles.searchInputWrapper}>
                     <Search size={16} className={styles.searchIcon} />
                     <input
                         type="text"
@@ -83,14 +68,14 @@ function RecordsDisplay({ registros, isValid, onComprovanteChange, onTransferenc
                     />
                 </div>
                 {searchTerm && filteredRegistros.length === 0 ? (
-                    <p className={`${styles.noResultsMessage} ${styles.animateFadeIn}`}>
+                    <p className={styles.noResultsMessage}>
                         Nenhum resultado encontrado
                     </p>
                 ) : null}
             </div>
 
             {/* Registros filtrados */}
-            <div className={visible ? styles.animateFadeIn : ''}>
+            <div className={`${styles.transition} ${fadeVisible ? styles.fadeIn : styles.fadeOut}`}>
                 {filteredRegistros.map((registro, index) => {
                     const comprovanteId = registro.comprovante ? Object.keys(registro.comprovante)[0] : null;
 
@@ -108,17 +93,7 @@ function RecordsDisplay({ registros, isValid, onComprovanteChange, onTransferenc
                     }
 
                     return (
-                        <div 
-                            key={index} 
-                            className={`${styles.animateFadeInUp}`} 
-                            style={{ 
-                                animationDelay: `${(index * 50)}ms`,
-                                opacity: visible ? 1 : 0,
-                                transform: visible ? 'translateY(0)' : 'translateY(20px)',
-                                transition: 'opacity 0.5s ease, transform 0.5s ease',
-                                transitionDelay: `${(index * 50)}ms`
-                            }}
-                        >
+                        <div key={index}>
                             <EditableTransferDetail
                                 comprovante={comprovanteId ? registro.comprovante[comprovanteId] : null}
                                 transferencia={transferenciaObj}

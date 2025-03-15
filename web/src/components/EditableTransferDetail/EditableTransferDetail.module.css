@@ -3,14 +3,10 @@
     background-color: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     border: 1px solid #eee;
-    margin-bottom: 6px;
-    /* Reduzido de 12px para 6px */
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 12px;
+    transition: opacity 0.3s;
+    /* Garantindo que não haja scroll */
+    overflow: visible;
 }
 
 .validCard {
@@ -97,17 +93,18 @@
 .content {
     padding: 0;
     overflow: hidden;
+    /* Mantido para o efeito de expandir/contrair */
     max-height: 0;
     opacity: 0;
-    transition: max-height 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease;
 }
 
 .contentExpanded {
     padding: 12px;
-    max-height: 500px;
-    /* Altura suficiente para acomodar o conteúdo */
+    max-height: none;
+    /* Alterado para permitir crescimento ilimitado */
     opacity: 1;
-    transition: max-height 0.5s ease-in, opacity 0.3s ease-in, padding 0.3s ease;
+    transition: max-height 0.3s ease-in, opacity 0.3s ease-in, padding 0.3s ease;
 }
 
 .iconRotate {
@@ -122,6 +119,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow: visible;
 }
 
 .row {
@@ -210,16 +208,12 @@
     padding: 2px;
     border-radius: 4px;
     opacity: 0.7;
-    transition: all 0.15s;
+    transition: opacity 0.3s;
 }
 
 .button:hover {
     background-color: rgba(74, 144, 226, 0.1);
     opacity: 1;
-}
-
-.button:active {
-    transform: scale(0.95);
 }
 
 .unknown {

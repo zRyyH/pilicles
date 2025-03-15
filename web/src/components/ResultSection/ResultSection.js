@@ -1,13 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { formatCurrency } from '../../utils/formatters';
-import EditableTransferDetail from '../EditableTransferDetail';
-import InlineLoading from '../InlineLoading';
-import { Info, Check, X, Copy, DollarSign } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Info, Check } from 'lucide-react';
 import styles from './ResultSection.module.css';
 import TabsNavigation from './TabsNavigation';
 import RecordsDisplay from './RecordsDisplay';
 import MetricsSummary from './MetricsSummary';
 import ResultDetails from './ResultDetails';
+import InlineLoading from '../InlineLoading';
 import { comprovantesService } from '../../services/apiService';
 
 function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
@@ -19,17 +17,7 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
     const [respostaEfetivar, setRespostaEfetivar] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('validos');
-    const [isAnimating, setIsAnimating] = useState(false);
-    const [mainAnimationComplete, setMainAnimationComplete] = useState(false);
-    
-    // Efeito para animar o componente inteiro ao montar
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setMainAnimationComplete(true);
-        }, 600);
-        
-        return () => clearTimeout(timer);
-    }, []);
+    const [fadeState, setFadeState] = useState(true);
 
     // Handle field change for comprovante
     const handleComprovanteChange = useCallback((registroIndex, isValid, comprovanteId, campo, valor) => {
@@ -79,45 +67,44 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
 
     // Submit changes to server
     const efetivarAlteracoes = async () => {
-        if (isLoading || isAnimating) return;
-        
+        if (isLoading) return;
+
         try {
             setIsLoading(true);
-            setIsAnimating(true);
-            
-            // Adicionar animação de saída e depois fazer a requisição
+            setFadeState(false);
+
+            // Simple fade transition
             setTimeout(async () => {
                 const result = await comprovantesService.efetivarAlteracoes(dadosEditados);
                 setRespostaEfetivar(result);
-                
+
                 if (onEfetivar && typeof onEfetivar === 'function') {
                     onEfetivar(dadosEditados);
                 }
-                
+
                 // Mudar para a aba de resultado após completar
                 setActiveTab('resultado');
-                setIsAnimating(false);
                 setIsLoading(false);
+                setFadeState(true);
             }, 300);
-            
+
         } catch (error) {
             console.error('Erro ao efetivar alterações:', error);
             alert(`Erro ao efetivar alterações: ${error.message}`);
-            setIsAnimating(false);
             setIsLoading(false);
+            setFadeState(true);
         }
     };
 
-    // Tab change handler com animação
+    // Tab change handler with simplified fade
     const handleTabChange = (tab) => {
-        if (isAnimating || tab === activeTab) return;
-        
-        setIsAnimating(true);
-        
-        // Efeito de transição suave
+        if (tab === activeTab) return;
+
+        setFadeState(false);
+
         setTimeout(() => {
             setActiveTab(tab);
-            setIsAnimating(false);
+            setFadeState(true);
         }, 300);
     };
 
@@ -136,9 +123,9 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
     // Render empty state
     if (isEmpty) {
         return (
-            <div className={`${styles.container} ${styles.animateFadeIn}`}>
-                <div className={`${styles.emptyState} ${styles.animateScaleIn}`}>
-                    <Info size={48} className={`${styles.emptyStateIcon} ${styles.animatePulse}`} />
+            <div className={styles.container}>
+                <div className={`${styles.emptyState} ${styles.fade}`}>
+                    <Info size={48} className={styles.emptyStateIcon} />
                     <p>Nenhum resultado para exibir</p>
                     <span>Selecione e envie os arquivos para análise</span>
                 </div>
@@ -146,25 +133,28 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
         );
     }
 
+    // Estilo inline para garantir que não haja scroll em nenhum lugar
+    const noScrollStyle = {
+        height: 'auto',
+        maxHeight: 'none',
+        minHeight: 'auto',
+        overflow: 'visible'
+    };
+
     return (
-        <div className={`
-            ${styles.container} 
-            ${mainAnimationComplete ? styles.animateFadeIn : ''}
-            ${isAnimating ? styles.animateScaleOut : ''}
-        `}>
+        <div className={styles.container} style={noScrollStyle}>
             {/* Tabs navigation */}
-            <TabsNavigation 
-                activeTab={activeTab} 
-                tabs={tabs} 
-                onTabChange={handleTabChange} 
+            <TabsNavigation
+                activeTab={activeTab}
+                tabs={tabs}
+                onTabChange={handleTabChange}
             />
 
-            {/* Tab content */}
-            <div className={`
-                ${styles.tabContent} 
-                ${isAnimating ? styles.fadeOut : styles.fadeIn}
-                ${mainAnimationComplete ? styles.animateFadeIn : ''}
-            `}>
+            {/* Tab content with fade transition */}
+            <div
+                className={`${styles.tabContent} ${fadeState ? styles.fadeIn : styles.fadeOut}`}
+                style={noScrollStyle}
+            >
                 {activeTab === 'validos' && (
                     <RecordsDisplay
                         registros={dadosEditados.validos}
@@ -194,16 +184,14 @@ function ResultSection({ validos = [], invalidos = [], onEfetivar }) {
             </div>
 
             {/* Actions */}
-            <div className={`${styles.actionsContainer} ${mainAnimationComplete ? styles.animateFadeInUp : ''}`}>
+            <div className={styles.actionsContainer}>
                 {isLoading ? (
-                    <div className={`${styles.loadingContainer} ${styles.animateFadeIn}`}>
-                        <InlineLoading message="Processando efetivação..." size="medium" />
-                    </div>
+                    <InlineLoading.Small />
                 ) : (
                     <button
-                        className={`${styles.efetivarButton} ${styles.hoverLift} ${styles.animatePulse}`}
+                        className={styles.efetivarButton}
                         onClick={efetivarAlteracoes}
-                        disabled={isLoading || isAnimating}
+                        disabled={isLoading}
                     >
                         <Check size={20} />
                         EFETIVAR ALTERAÇÕES
