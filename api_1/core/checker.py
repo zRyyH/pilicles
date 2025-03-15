@@ -102,7 +102,10 @@ class Checker:
         self.transferencias_invalidas = self.transferencias.copy()
 
         for transf in self.transferencias_validas:
-            self.transferencias_invalidas.pop(list(transf.keys())[0])
+            try:
+                self.transferencias_invalidas.pop(list(transf.keys())[0])
+            except:
+                print("Erro ao remover transferência válida da lista de transferências inválidas:", transf)
         
         self.transferencias_invalidas = list(self.transferencias_invalidas.values())
 
