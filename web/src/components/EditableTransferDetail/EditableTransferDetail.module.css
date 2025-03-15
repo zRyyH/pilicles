@@ -66,6 +66,17 @@
     color: #444;
 }
 
+.summaryFile {
+    color: #666;
+    font-style: italic;
+    font-size: 0.75rem;
+    margin-left: 4px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .badge {
     padding: 3px 8px;
     border-radius: 50px;
@@ -177,6 +188,15 @@
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
+}
+
+/* Estilização específica para o campo de arquivo */
+.displayField[data-field-type="path"] {
+    font-family: monospace;
+    font-size: 0.8rem;
+    background-color: #f5f7fa;
+    border-color: #e0e5eb;
+    color: #555;
 }
 
 .button {

@@ -7,7 +7,8 @@ const CAMPOS = [
     { id: 'data', label: 'Data' },
     { id: 'nome', label: 'Nome' },
     { id: 'valor', label: 'Valor' },
-    { id: 'banco', label: 'Banco' }
+    { id: 'banco', label: 'Banco' },
+    { id: 'path', label: 'Arquivo' }
 ];
 
 // Componente para campo editável (memoizado para prevenir re-renderizações)
@@ -24,6 +25,10 @@ const EditableField = memo(function EditableField({ campo, value, isEditing, onT
         if (fieldId === 'valor' && val) {
             return typeof val === 'number' ?
                 new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val) : val;
+        }
+        if (fieldId === 'path' && val) {
+            // Mostra apenas o nome do arquivo sem o caminho completo
+            return val.split('/').pop();
         }
         return val || '';
     }, []);
@@ -48,12 +53,13 @@ const EditableField = memo(function EditableField({ campo, value, isEditing, onT
                 <div className={styles.editingField}>
                     <input
                         ref={inputRef}
-                        type={campo === 'valor' ? 'number' : 'text'}
+                        type={campo === 'valor' ? 'number' : campo === 'path' ? 'text' : 'text'}
                         value={value}
                         step={campo === 'valor' ? '0.01' : undefined}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
                         className={styles.input}
+                        placeholder={campo === 'path' ? 'Nome do arquivo' : ''}
                     />
                     <button
                         onClick={onToggleEdit}
@@ -64,7 +70,10 @@ const EditableField = memo(function EditableField({ campo, value, isEditing, onT
                     </button>
                 </div>
             ) : (
-                <div className={styles.displayField}>
+                <div
+                    className={styles.displayField}
+                    data-field-type={campo}
+                >
                     <span className={value ? '' : styles.unknown}>
                         {value ? formatValue(campo, value) : 'Não informado'}
                     </span>
@@ -127,6 +136,11 @@ function EditableTransferDetail({
                     {comprovante.valor && (
                         <span className={styles.summaryValue}>
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(comprovante.valor)}
+                        </span>
+                    )}
+                    {comprovante.path && (
+                        <span className={styles.summaryFile}>
+                            {comprovante.path.split('/').pop()}
                         </span>
                     )}
                 </div>

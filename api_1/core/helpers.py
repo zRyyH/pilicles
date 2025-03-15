@@ -51,7 +51,8 @@ def processar_comprovante(path_image):
     info(f"Iniciando processamento do comprovante: {path_image}")
     SYSTEM_MESSAGE_AI = """
     Analise esse JSON do google cloud vision e retorne um JSON com as informações da transferência.
-    Caso não ache o nome de quem enviou, retorne "nome": ""
+    Busque sempre pelas informações de origem, de quem enviou o dinheiro e não de quem recebeu.
+    Caso não ache o nome, retorne "nome": ""
     Caso não ache o valor enviado, retorne "valor": 0
     Caso não ache a data da transferencia, retorne "data": ""
     Retorne nesse formato:
