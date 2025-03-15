@@ -94,9 +94,31 @@ function ComprovantesBusca() {
         // Aplicar filtro de data
         if (filtroData) {
             const dataFiltro = new Date(filtroData);
+
+            // Formatar a data de filtro para comparação (YYYY-MM-DD)
+            const dataFiltroFormatada = filtroData; // Já está no formato YYYY-MM-DD do input date
+
             resultados = resultados.filter(comp => {
-                const dataComp = new Date(comp.data);
-                return dataComp.toISOString().split('T')[0] === dataFiltro.toISOString().split('T')[0];
+                try {
+                    // Verificar se a data é válida antes de criar um objeto Date
+                    if (!comp.data) return false;
+
+                    const dataComp = new Date(comp.data);
+
+                    // Verificar se a data é válida
+                    if (isNaN(dataComp.getTime())) return false;
+
+                    // Formatar a data do comprovante para YYYY-MM-DD para comparação
+                    const year = dataComp.getFullYear();
+                    const month = String(dataComp.getMonth() + 1).padStart(2, '0');
+                    const day = String(dataComp.getDate()).padStart(2, '0');
+                    const dataCompFormatada = `${year}-${month}-${day}`;
+
+                    return dataCompFormatada === dataFiltroFormatada;
+                } catch (err) {
+                    console.error('Erro ao processar data:', err, comp.data);
+                    return false;
+                }
             });
         }
 
@@ -179,15 +201,29 @@ function ComprovantesBusca() {
     };
 
     const formatarData = (dataString) => {
-        const data = new Date(dataString);
-        return data.toLocaleDateString('pt-BR');
+        try {
+            const data = new Date(dataString);
+            // Verificar se a data é válida
+            if (isNaN(data.getTime())) {
+                return 'Data inválida';
+            }
+            return data.toLocaleDateString('pt-BR');
+        } catch (err) {
+            console.error('Erro ao formatar data:', err);
+            return 'Data inválida';
+        }
     };
 
     const formatarValor = (valor) => {
-        return parseFloat(valor).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        });
+        try {
+            return parseFloat(valor).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        } catch (err) {
+            console.error('Erro ao formatar valor:', err);
+            return 'Valor inválido';
+        }
     };
 
     const handleGerarPDF = () => {
